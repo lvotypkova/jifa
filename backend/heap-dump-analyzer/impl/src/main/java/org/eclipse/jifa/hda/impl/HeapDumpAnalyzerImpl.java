@@ -75,16 +75,7 @@ import org.eclipse.mat.snapshot.query.SnapshotQuery;
 import java.lang.ref.SoftReference;
 import java.net.URL;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.StringTokenizer;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -1408,7 +1399,7 @@ public class HeapDumpAnalyzerImpl implements HeapDumpAnalyzer {
                             .calculateRetainedSize(context.snapshot, true, true, Helper.VOID_LISTENER)))
                         .paging(new PagingRequest(page, pageSize))
                         .map(record -> new Model.Histogram.Item(record.getClassId(), record.getLabel(),
-                                                                Model.Histogram.ItemType.CLASS_LOADER,
+                                                                Model.Histogram.ItemType.CLASS,
                                                                 record.getNumberOfObjects(),
                                                                 record.getUsedHeapSize(),
                                                                 record.getRetainedHeapSize()))
@@ -1499,6 +1490,26 @@ public class HeapDumpAnalyzerImpl implements HeapDumpAnalyzer {
     }
 
     @Override
+    public PageView<JavaObject> getHistogramObjects(int classId, int page, int pageSize) {
+        return $(() -> {
+            IResult result = queryByCommand(context, "histogram -groupBy BY_CLASS", Collections.emptyMap());
+            Histogram h = (Histogram) result;
+            List<ClassHistogramRecord> records =
+                    (List<ClassHistogramRecord>) h.getClassHistogramRecords();
+
+            Optional<ClassHistogramRecord> ro = records.stream().filter(r -> r.getClassId() == classId).findFirst();
+            if (ro.isPresent()) {
+                IContextObject c = ((Histogram) result).getContext(ro.get());
+                if (c instanceof IContextObjectSet) {
+                    int[] objectIds = ((IContextObjectSet) c).getObjectIds();
+                    return PageViewBuilder.build(objectIds, new PagingRequest(page, pageSize), this::getObjectInfo);
+                }
+            }
+            return PageView.empty();
+        });
+    }
+
+    @Override
     public PageView<Model.Histogram.Item> getChildrenOfHistogram(Model.Histogram.Grouping groupBy, int[] ids,
                                                                  String sortBy, boolean ascendingOrder,
                                                                  int parentObjectId, int page, int pageSize) {
@@ -1533,7 +1544,7 @@ public class HeapDumpAnalyzerImpl implements HeapDumpAnalyzer {
                                 .calculateRetainedSize(context.snapshot, true, true, Helper.VOID_LISTENER)))
                             .paging(new PagingRequest(page, pageSize))
                             .map(record -> new Model.Histogram.Item(record.getClassId(), record.getLabel(),
-                                                                    Model.Histogram.ItemType.CLASS_LOADER,
+                                                                    Model.Histogram.ItemType.CLASS,
                                                                     record.getNumberOfObjects(),
                                                                     record.getUsedHeapSize(),
                                                                     record.getRetainedHeapSize()))

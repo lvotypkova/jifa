@@ -47,11 +47,13 @@
     <v-contextmenu ref="contextmenu">
       <v-contextmenu-submenu :title="$t('jifa.heap.ref.object.label')">
         <v-contextmenu-item
-                @click="$emit('outgoingRefsOfObj', contextMenuTargetObjectId, contextMenuTargetObjectLabel)">
+                @click="groupingBy === 'by_class' ? $emit('outgoingRefsOfHistogramObjs', contextMenuTargetObjectId, contextMenuTargetObjectLabel)
+                                                  : $emit('outgoingRefsOfObj', contextMenuTargetObjectId, contextMenuTargetObjectLabel)">
           {{$t('jifa.heap.ref.object.outgoing')}}
         </v-contextmenu-item>
         <v-contextmenu-item
-                @click="$emit('incomingRefsOfObj', contextMenuTargetObjectId, contextMenuTargetObjectLabel)">
+                @click="groupingBy === 'by_class' ? $emit('incomingRefsOfHistogramObjs', contextMenuTargetObjectId, contextMenuTargetObjectLabel)
+                                                  : $emit('incomingRefsOfObj', contextMenuTargetObjectId, contextMenuTargetObjectLabel)">
           {{$t('jifa.heap.ref.object.incoming')}}
         </v-contextmenu-item>
       </v-contextmenu-submenu>
@@ -173,6 +175,7 @@
   import axios from 'axios'
   import {ICONS,getIcon} from "./IconHealper";
   import {heapDumpService, toReadableCount, toReadableCountFormatter, toReadableSizeWithUnit, toReadableSizeWithUnitFormatter} from '../../util'
+  import {OBJECT_TYPE} from "@/components/heapdump/CommonType";
 
   let rowKey = 1
   export default {
@@ -233,7 +236,7 @@
 
                 retainedSize: record.retainedSize,
                 isRecord: true,
-                hasChildren: this.groupingBy!=='by_class'
+                hasChildren: record.type !== OBJECT_TYPE.CLASS
               }))
 
           this.tableData = this.records.concat({
@@ -314,7 +317,7 @@
 
               retainedSize: record.retainedSize,
               isRecord: true,
-              hasChildren: this.groupingBy!=='by_class'
+              hasChildren: record.type !== OBJECT_TYPE.CLASS
             })
           })
 
